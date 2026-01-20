@@ -1,0 +1,31 @@
+# Build artifacts
+target/
+.mvn/
+mvnw
+mvnw.cmd
+
+# IDE files
+.idea/
+.vscode/
+*.iml
+*.ipr
+*.iws
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Git
+.git/
+.gitignore
+
+# Documentation
+*.md
+!README.md
+
+# Other project files - not needed in event-ingester image
+../k8s/
+../scripts/
+../diagrams/
+../certificate/
+../.github/

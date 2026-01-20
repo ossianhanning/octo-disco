@@ -1,0 +1,215 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-dashboard-event-pipeline
+  namespace: monitoring
+  labels:
+    grafana_dashboard: "1"
+data:
+  event-pipeline-dashboard.json: |
+    {
+      "dashboard": {
+        "title": "Event Processing Pipeline",
+        "tags": ["voyado", "events"],
+        "timezone": "browser",
+        "panels": [
+          {
+            "title": "Events Ingested per Second",
+            "type": "graph",
+            "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
+            "targets": [
+              {
+                "expr": "rate(events_search_total[1m])",
+                "legendFormat": "Search Events"
+              },
+              {
+                "expr": "rate(events_product_view_total[1m])",
+                "legendFormat": "Product View Events"
+              }
+            ]
+          },
+          {
+            "title": "Events Written to ClickHouse",
+            "type": "graph",
+            "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
+            "targets": [
+              {
+                "expr": "rate(clickhouse_search_events_inserted_total[1m])",
+                "legendFormat": "Search Events to ClickHouse"
+              },
+              {
+                "expr": "rate(clickhouse_product_view_events_inserted_total[1m])",
+                "legendFormat": "Product Views to ClickHouse"
+              }
+            ]
+          },
+          {
+            "title": "API Latency (p95, p99)",
+            "type": "graph",
+            "gridPos": { "h": 8, "w": 12, "x": 0, "y": 8 },
+            "targets": [
+              {
+                "expr": "histogram_quantile(0.95, rate(events_processing_duration_seconds_bucket[5m]))",
+                "legendFormat": "p95"
+              },
+              {
+                "expr": "histogram_quantile(0.99, rate(events_processing_duration_seconds_bucket[5m]))",
+                "legendFormat": "p99"
+              }
+            ]
+          },
+          {
+            "title": "HPA Replicas",
+            "type": "graph",
+            "gridPos": { "h": 8, "w": 12, "x": 12, "y": 8 },
+            "targets": [
+              {
+                "expr": "kube_horizontalpodautoscaler_status_current_replicas{horizontalpodautoscaler=\"event-ingester-hpa\"}",
+                "legendFormat": "Event Ingester Replicas"
+              },
+              {
+                "expr": "kube_horizontalpodautoscaler_status_current_replicas{horizontalpodautoscaler=\"kafka-clickhouse-consumer-hpa\"}",
+                "legendFormat": "Consumer Replicas"
+              }
+            ]
+          },
+          {
+            "title": "JVM Memory Usage",
+            "type": "graph",
+            "gridPos": { "h": 8, "w": 12, "x": 0, "y": 16 },
+            "targets": [
+              {
+                "expr": "jvm_memory_used_bytes{job=\"event-ingester\",area=\"heap\"}",
+                "legendFormat": "Event Ingester Heap"
+              },
+              {
+                "expr": "jvm_memory_used_bytes{job=\"kafka-clickhouse-consumer\",area=\"heap\"}",
+                "legendFormat": "Consumer Heap"
+              }
+            ]
+          },
+          {
+            "title": "Virtual Threads (Event Ingester)",
+            "type": "graph",
+            "gridPos": { "h": 8, "w": 12, "x": 12, "y": 16 },
+            "targets": [
+              {
+                "expr": "jvm_threads_live_threads{job=\"event-ingester\"}",
+                "legendFormat": "Live Threads"
+              }
+            ]
+          },
+          {
+            "title": "Load Generator Stats",
+            "type": "stat",
+            "gridPos": { "h": 4, "w": 6, "x": 0, "y": 24 },
+            "targets": [
+              {
+                "expr": "generator_search_events_sent_total + generator_product_view_events_sent_total",
+                "legendFormat": "Total Events Generated"
+              }
+            ]
+          },
+          {
+            "title": "Events Per Second (Generator)",
+            "type": "stat",
+            "gridPos": { "h": 4, "w": 6, "x": 6, "y": 24 },
+            "targets": [
+              {
+                "expr": "rate(generator_search_events_sent_total[1m]) + rate(generator_product_view_events_sent_total[1m])",
+                "legendFormat": "Events/sec"
+              }
+            ]
+          }
+        ],
+        "refresh": "5s",
+        "time": {
+          "from": "now-15m",
+          "to": "now"
+        }
+      }
+    }
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-dashboard-clickhouse
+  namespace: monitoring
+  labels:
+    grafana_dashboard: "1"
+data:
+  clickhouse-analytics-dashboard.json: |
+    {
+      "dashboard": {
+        "title": "ClickHouse Analytics",
+        "tags": ["clickhouse", "analytics"],
+        "timezone": "browser",
+        "panels": [
+          {
+            "title": "Total Events in ClickHouse",
+            "type": "stat",
+            "gridPos": { "h": 4, "w": 6, "x": 0, "y": 0 },
+            "targets": [
+              {
+                "rawSql": "SELECT count() FROM events.search_events",
+                "format": "table"
+              }
+            ],
+            "fieldConfig": {
+              "defaults": {
+                "unit": "short"
+              }
+            }
+          },
+          {
+            "title": "Product Views in ClickHouse",
+            "type": "stat",
+            "gridPos": { "h": 4, "w": 6, "x": 6, "y": 0 },
+            "targets": [
+              {
+                "rawSql": "SELECT count() FROM events.product_view_events",
+                "format": "table"
+              }
+            ]
+          },
+          {
+            "title": "Top Search Queries",
+            "type": "table",
+            "gridPos": { "h": 8, "w": 12, "x": 0, "y": 4 },
+            "targets": [
+              {
+                "rawSql": "SELECT search_query, count() as cnt FROM events.search_events WHERE timestamp > now() - INTERVAL 1 HOUR GROUP BY search_query ORDER BY cnt DESC LIMIT 10",
+                "format": "table"
+              }
+            ]
+          },
+          {
+            "title": "Top Products Viewed",
+            "type": "table",
+            "gridPos": { "h": 8, "w": 12, "x": 12, "y": 4 },
+            "targets": [
+              {
+                "rawSql": "SELECT product_id, count() as views FROM events.product_view_events WHERE timestamp > now() - INTERVAL 1 HOUR GROUP BY product_id ORDER BY views DESC LIMIT 10",
+                "format": "table"
+              }
+            ]
+          },
+          {
+            "title": "Events by Hour",
+            "type": "graph",
+            "gridPos": { "h": 8, "w": 24, "x": 0, "y": 12 },
+            "targets": [
+              {
+                "rawSql": "SELECT toStartOfHour(timestamp) as time, count() FROM events.search_events WHERE timestamp > now() - INTERVAL 24 HOUR GROUP BY time ORDER BY time",
+                "format": "time_series"
+              }
+            ]
+          }
+        ],
+        "refresh": "30s",
+        "time": {
+          "from": "now-1h",
+          "to": "now"
+        }
+      }
+    }

@@ -1,0 +1,78 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kafka-clickhouse-consumer
+  namespace: data
+  labels:
+    app: kafka-clickhouse-consumer
+spec:
+  replicas: 1
+  revisionHistoryLimit: 3
+  selector:
+    matchLabels:
+      app: kafka-clickhouse-consumer
+  template:
+    metadata:
+      labels:
+        app: kafka-clickhouse-consumer
+    spec:
+      containers:
+      - name: kafka-clickhouse-consumer
+        image: 100.76.133.85:30500/kafka-clickhouse-consumer:latest
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 8081
+          name: http
+        env:
+        - name: KAFKA_BOOTSTRAP_SERVERS
+          value: "kafka.data.svc.cluster.local:9092"
+        - name: CLICKHOUSE_HOST
+          value: "clickhouse.data.svc.cluster.local"
+        - name: CLICKHOUSE_PORT
+          value: "8123"
+        - name: CLICKHOUSE_DATABASE
+          value: "events"
+        - name: CLICKHOUSE_USER
+          value: "default"
+        - name: CLICKHOUSE_PASSWORD
+          value: "clickhouse"
+        - name: JAVA_OPTS
+          value: "-XX:+UseZGC -XX:MaxRAMPercentage=75.0"
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "250m"
+          limits:
+            memory: "1Gi"
+            cpu: "1000m"
+        livenessProbe:
+          httpGet:
+            path: /actuator/health
+            port: 8081
+          initialDelaySeconds: 60
+          periodSeconds: 30
+          timeoutSeconds: 5
+        readinessProbe:
+          httpGet:
+            path: /actuator/health
+            port: 8081
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 3
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: kafka-clickhouse-consumer
+  namespace: data
+  labels:
+    app: kafka-clickhouse-consumer
+spec:
+  type: ClusterIP
+  selector:
+    app: kafka-clickhouse-consumer
+  ports:
+    - name: http
+      protocol: TCP
+      port: 8081
+      targetPort: 8081

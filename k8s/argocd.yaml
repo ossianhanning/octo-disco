@@ -1,0 +1,142 @@
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: argocd
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: argocd-server-nodeport
+  namespace: argocd
+spec:
+  type: NodePort
+  selector:
+    app.kubernetes.io/name: argocd-server
+  ports:
+    - name: http
+      protocol: TCP
+      port: 8080
+      targetPort: 8080
+      nodePort: 30080
+    - name: https
+      protocol: TCP
+      port: 8443
+      targetPort: 8080
+      nodePort: 30443
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: argocd-webhook-secret
+  namespace: argocd
+type: Opaque
+stringData:
+  webhook.github.secret: "f7b3f90ef2fced6bda6d1308635f0560a5d332940c9d4244143612f964e2cf93"
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: github-ssh-key
+  namespace: argocd
+  labels:
+    argocd.argoproj.io/secret-type: repository
+type: Opaque
+stringData:
+  type: git
+  url: git@github.com:ossianhanning/octo-disco.git
+  sshPrivateKey: |
+    -----BEGIN RSA PRIVATE KEY-----
+    MIIEpAIBAAKCAQEAvaji89LKeMn81CYaCC8VRcs6eeCF9SPhn7BqExuWiM1EWfkP
+    nnR0DvdF0iAHuqqg3nBSJ1B/rY6vEntI3tds70wWqDId+eS/X0/w1lC2CpM4wBGy
+    4vt20el72WgDPBP+St0RqO5kdsaZ4TR/sTkcD2qR3QDlH7wUmsZ3RbbilLWWAF88
+    iWeIvm7iQB3s6OrEN0cxI/SH2nPJmBOhpxF5qUcXVWycwMgA5ta+cHOUr84A2J79
+    tCqql8pf7UoYPXlGJsOlsOX/56iKqZWL1Z4LjkEaDHrwG3NXRqvFDqxJWi0WI/gK
+    52QUYQhFCFa8dgnfPx13Q5jusSEpLIYAWM/cUwIDAQABAoIBAQCRH/4p3I4Zx1Wz
+    cERTJtP8R/pC8E8QuZgX/YHthRq3K3q17iLJeQqluQiwNNo1OANIsmHqu2o3gAru
+    9W9ZNTaiFXLw2QifAy583ErJc5EYnna6YdCkZw8QqLygKzruac4XsvmkbmZpjKaK
+    8QUUs0KJeV6L4fdxRRXvKRZzPfI7HzROTmP5u2HolPTg0VAGXliMSFyLc0KZXSpM
+    l4AkmwULlFoAFsFxFK8rkgtG3/4iKFJKn9X8QOoN7aZLU2XUezASWCCUZ3KMFVBf
+    IqwZh9WEKKEoDvf7sn16jZsoy9uqVdMdfj2nMjOBpDS/haBHOIhfsbEoe8teKV+X
+    DNXGUN7hAoGBAPfdkc6AGXX55mFfPfvIaQ9hBNZGpgHBeg4uUu6WWR6vsEPDKwxu
+    CHrAYh0LtQwNoWc+2diMsY6XFT09oLPhVDE+9eUUYhLTtSFmji9Ii7SUBFn/O4/w
+    7rCHIFbNmdapfwZhm+twNceC2FSihq9QdoilwhSOrQK+FLl64DJGfBYVAoGBAMPi
+    TcFOgpggxi73bV0LxMpI1CV34j+1Sdb4dLGyWGABXKSf30GWFLvKhUICU2Mcniaf
+    nqF3zyqBrdL70WiRJhmNpn221gSfw6XDP3+xLHtNzbjr+8Qq34MsCdbkZIhDLsI1
+    j2FfX1WRRKxR/l0qrSFX+8GlhTZJexS4/x2r3mrHAoGBAIsRE5eKo75fgXSsXTiB
+    DwED7BTU+psNlI+USg9253WiGQFL5UFKExPcELA/O0sR8rbcupkXBx/7gH0lsJ58
+    FCK1Mn1e3E+33G5q/edlioy8Z1yfKSnvgdwlVG2fWWrpGk3YQgTsph/UN8/0iCCg
+    woCUj7m8+zEIuNQALv3GMiSpAoGAAXSiDUivEcBUmK7AAkv/F125LdoZNU38kXth
+    KpzfqT75WEPT3eHmn4qeuOHZisgAqNrQy/Re9rrl9sZmRPenJ9N0pESCjKA/TPEJ
+    fMJtSTFH0RL32PpUlN3z6MPjt1uAcnMBcMDLrZAZyYoGcNzLUo8b0NGRDtk27+17
+    /9VyHqsCgYANLNdnX15r/yFOF43yyPAEOdeiWqEblcFnhmChUheN1HAHSzLpBJdo
+    wTJg+bSon1bF4ZmQYYab9yzkS0c/vqr+0dE7fZGNVbrgho/tm332G4QPo3N+Omwu
+    GpM29hgQ6lXz/RY7NL0MQS7VGgD23zsAGGTytjYpBt0EJCBEyx5Ywg==
+    -----END RSA PRIVATE KEY-----
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: voyado-elevate-insights
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  
+  source:
+    repoURL: git@github.com:ossianhanning/octo-disco.git
+    targetRevision: main
+    path: k8s
+    
+  # Destination: Where to deploy
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: default  # Change to your target namespace
+  
+  # Sync Policy: Automated deployment
+  syncPolicy:
+    automated:
+      prune: true        # Delete resources when removed from Git
+      selfHeal: true     # Auto-sync when cluster state drifts from Git
+      allowEmpty: false
+    syncOptions:
+      - Validate=true
+      - CreateNamespace=true  # Auto-create namespace if it doesn't exist
+      - PrunePropagationPolicy=foreground
+      - PruneLast=true
+    retry:
+      limit: 5
+      backoff:
+        duration: 5s
+        factor: 2
+        maxDuration: 3m
+
+  ignoreDifferences: []
+  
+  revisionHistoryLimit: 10
+---
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: voyado
+  namespace: argocd
+spec:
+  description: Voyado Elevate Insights Platform
+  
+  sourceRepos:
+    - git@github.com:ossianhanning/octo-disco.git
+  
+  destinations:
+    - namespace: '*'
+      server: https://kubernetes.default.svc
+  
+  clusterResourceWhitelist:
+    - group: '*'
+      kind: '*'
+  
+  namespaceResourceBlacklist:
+    - group: ''
+      kind: ResourceQuota
+    - group: ''
+      kind: LimitRange

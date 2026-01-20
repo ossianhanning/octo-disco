@@ -1,0 +1,55 @@
+name: Push to Private Registry
+
+on:
+  push:
+    branches: [ "main" ]
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Tailscale
+        uses: tailscale/github-action@v2
+        with:
+          oauth-client-id: ${{ secrets.TS_OAUTH_CLIENT_ID }}
+          oauth-secret: ${{ secrets.TS_OAUTH_SECRET }}
+          tags: tag:ci
+
+      - name: Configure insecure registry
+        run: |
+          sudo mkdir -p /etc/docker
+          echo '{"insecure-registries": ["${{ secrets.REGISTRY }}"]}' | sudo tee /etc/docker/daemon.json
+          sudo systemctl restart docker || true
+          
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+        with:
+          driver-opts: |
+            network=host
+          config-inline: |
+            [registry."${{ secrets.REGISTRY }}"]
+              http = true
+              insecure = true
+
+      - name: Set up JDK 25
+        uses: actions/setup-java@v4
+        with:
+          java-version: '25'
+          distribution: 'temurin'
+
+      - name: Build and Push Event Ingester
+        run: |
+          docker build -t ${{ secrets.REGISTRY }}/event-ingester:${{ github.sha }} -f event-ingester/Dockerfile event-ingester/
+          docker build -t ${{ secrets.REGISTRY }}/event-ingester:latest -f event-ingester/Dockerfile event-ingester/
+          docker push ${{ secrets.REGISTRY }}/event-ingester:${{ github.sha }}
+          docker push ${{ secrets.REGISTRY }}/event-ingester:latest
+
+      - name: Build and Push Kafka ClickHouse Consumer
+        run: |
+          docker build -t ${{ secrets.REGISTRY }}/kafka-clickhouse-consumer:${{ github.sha }} -f kafka-clickhouse-consumer/Dockerfile kafka-clickhouse-consumer/
+          docker build -t ${{ secrets.REGISTRY }}/kafka-clickhouse-consumer:latest -f kafka-clickhouse-consumer/Dockerfile kafka-clickhouse-consumer/
+          docker push ${{ secrets.REGISTRY }}/kafka-clickhouse-consumer:${{ github.sha }}
+          docker push ${{ secrets.REGISTRY }}/kafka-clickhouse-consumer:latest
