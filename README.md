@@ -8,6 +8,8 @@
 
 * This Kubernetes cluster is currently running on-premise on one of my machines (hence the Tailscale usage in the GitHub workflow) but could easily be deployed to AWS instead.
 
+* No authentication/authorization or multi-tenancy support implemented at this stage, but would not necessarily have to be too complex. To enable this we'd probably want to add MariaDB or some other SQL instance to the cluster (or equivalent AWS alternative).
+
 ## Screenshots
 
 ### ArgoCD GitOps Deployment
