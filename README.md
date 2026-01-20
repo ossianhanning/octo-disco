@@ -7,3 +7,30 @@
 * Java applications should be stateless and easily scalable.
 
 * This Kubernetes cluster is currently running on-premise on one of my machines (hence the Tailscale usage in the GitHub workflow) but could easily be deployed to AWS instead.
+
+## Screenshots
+
+### ArgoCD GitOps Deployment
+![ArgoCD Applications](images/Argo-1.png)
+![ArgoCD Deployment Details](images/Argo-2.png)
+
+### ClickHouse Analytics Database
+![ClickHouse](images/ClickHouse.png)
+
+### ELK Stack Logging
+![ELK](images/ELK.png)
+
+### Event Generator Swagger UI
+![Event Generator](images/GeneratorSwagger.png)
+
+### Grafana Dashboards
+![Grafana](images/Grafana-2.png)
+
+### Jaeger Distributed Tracing
+![Jaeger](images/Jaeger.png)
+
+### Metabase Analytics
+![Metabase](images/Metabase.png)
+
+### Prometheus Metrics
+![Prometheus](images/Prometheus.png)
